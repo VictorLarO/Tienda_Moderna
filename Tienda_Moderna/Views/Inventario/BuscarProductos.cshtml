@@ -1,0 +1,53 @@
+﻿<!-- VISTA: BuscarProductos.cshtml -->
+@model List<Tienda_Moderna.Models.Producto>
+
+@{
+    ViewData["Title"] = "Buscar Productos";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="BuscarProductos" method="get" class="mb-4">
+    <div class="input-group">
+        <input type="text" name="buscar" id="buscar" class="form-control" placeholder="Nombre del producto..." />
+        <button type="submit" class="btn btn-primary">Buscar</button>
+    </div>
+</form>
+
+@if (Model == null || !Model.Any())
+{
+    <p>No se encontraron productos que coincidan con la búsqueda.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID Producto</th>
+                <th>Nombre Producto</th>
+                <th>Stock Disponible</th>
+                <th>Precio Compra</th>
+                <th>Fecha Caducidad</th>
+                <th>Precio Venta</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var producto in Model)
+            {
+                <tr>
+                    <td>@producto.id_prod</td>
+                    <td>@producto.nombre_prod</td>
+                    <td>@producto.stock_prod</td>
+                    <td>@producto.precio_com_prod</td>
+                    <td>@(producto.fecha_cad_prod?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                    <td>@producto.precio_ven_prod</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<!-- Botón para regresar a la página principal de inventario -->
+<div style="margin-top: 20px;">
+    <a href="@Url.Action("Index", "Inventario")" class="btn btn-secondary">Regresar</a>
+</div>

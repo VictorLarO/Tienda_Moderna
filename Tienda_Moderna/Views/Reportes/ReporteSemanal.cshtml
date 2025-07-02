@@ -1,0 +1,120 @@
+﻿@model IEnumerable<Tienda_Moderna.Models.ReporteSemanalViewModel>
+
+@{
+    ViewData["Title"] = "Reporte Semanal de Ventas";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<div style="margin-top: 20px;">
+    <div style="margin-bottom: 10px;">
+        <button id="btnReporteSemanal" class="btn btn-info">Mostrar Reporte Semanal</button>
+        <a href="@Url.Action("Index", "Reportes")" class="btn btn-secondary" style="margin-left: 10px;">Regresar</a>
+    </div>
+    <div id="mensajeSemanal" class="text-danger" style="display:none;"></div>
+
+    <table id="tablaReporteSemanal" class="table" style="display:none;">
+        <thead>
+            <tr>
+                <th>ID Venta</th>
+                <th>Fecha Venta</th>
+                <th>ID Producto</th>
+                <th>Nombre Producto</th>
+                <th>Cantidad</th>
+                <th>Total por Producto</th>
+                <th>Ganancia por Producto</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="6" class="text-end">
+                    <strong>Ganancia Total de la Semana:</strong>
+                </td>
+                <td id="totalGananciaSemana" class="fw-bold text-success">0.00</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script>
+        $(document).ready(function () {
+            console.log("jQuery cargado y documento listo.");
+
+            $('#btnReporteSemanal').on('click', function () {
+                console.log("Botón 'Mostrar Reporte Semanal' clicado.");
+
+                $('#mensajeSemanal').hide();
+                $('#tablaReporteSemanal').hide();
+
+                $.ajax({
+                    url: '@Url.Action("ObtenerReporteSemanal", "Reportes")',
+                    method: 'POST',
+                    dataType: 'json',
+                    success: function (response) {
+                        console.log("Respuesta recibida:", response);
+
+                        if (!response.success) {
+                            $('#mensajeSemanal')
+                                .text(response.error || 'Error al obtener el reporte.')
+                                .show();
+                            $('#tablaReporteSemanal').hide();
+                            return;
+                        }
+
+                        var data = response.data || [];
+                        if (data.length === 0) {
+                            $('#mensajeSemanal')
+                                .text('No hay ventas registradas esta semana.')
+                                .show();
+                            $('#tablaReporteSemanal').hide();
+                            return;
+                        }
+
+                        var $tbody = $('#tablaReporteSemanal tbody');
+                        $tbody.empty();
+                        var gananciaTotal = 0;
+
+                        data.forEach(function (item) {
+                            gananciaTotal += item.ganancia;
+
+                            var fila = '<tr>' +
+                                '<td>' + item.idVenta + '</td>' +
+                                '<td>' + new Date(item.fechaVenta).toLocaleDateString('es-ES', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                }) + '</td>' +
+                                '<td>' + item.idProducto + '</td>' +
+                                '<td>' + item.nombreProducto + '</td>' +
+                                '<td>' + item.cantidad + '</td>' +
+                                '<td>' + item.totalPorProducto.toFixed(2) + '</td>' +
+                                '<td>' + item.ganancia.toFixed(2) + '</td>' +
+                                '</tr>';
+                            $tbody.append(fila);
+                        });
+
+                        $('#totalGananciaSemana')
+                            .text(gananciaTotal.toFixed(2));
+
+                        $('#mensajeSemanal').hide();
+                        $('#tablaReporteSemanal').show();
+                    },
+                    error: function (xhr, status, error) {
+                        console.error("Error en la llamada AJAX:", xhr, status, error);
+                        var msg = xhr.responseJSON?.error || 'Error al obtener el reporte';
+                        $('#mensajeSemanal')
+                            .text(msg)
+                            .show();
+                        $('#tablaReporteSemanal').hide();
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,211 @@
+﻿@model List<Tienda_Moderna.Models.Producto>
+
+@{
+    ViewData["Title"] = "Gestión de Productos";
+    var proveedoresIds = ViewBag.ProveedoresIds as List<short> ?? new List<short>();
+    var marcasIds = ViewBag.MarcasIds as List<short> ?? new List<short>();
+}
+
+<h2>@ViewData["Title"]</h2>
+
+@if (ViewData["Mensaje"] != null)
+{
+    <div class="alert alert-info" id="mensaje">@ViewData["Mensaje"]</div>
+}
+
+<p>
+    <button class="btn btn-primary" onclick="abrirModalAgregar()">Agregar Producto</button>
+</p>
+
+<table class="table table-bordered table-striped" id="tablaProductos">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Stock</th>
+            <th>Precio Compra</th>
+            <th>Precio Venta</th>
+            <th>Caducidad</th>
+            <th>ID Proveedor</th>
+            <th>ID Marca</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            <tr>
+                <td>@p.id_prod</td>
+                <td>@p.nombre_prod</td>
+                <td>@p.stock_prod</td>
+                <td>@p.precio_com_prod.ToString("C")</td>
+                <td>@p.precio_ven_prod.ToString("C")</td>
+                <td>@(p.fecha_cad_prod?.ToString("yyyy-MM-dd") ?? "-")</td>
+                <td>@(p.id_prov_prod?.ToString() ?? "-")</td>
+                <td>@(p.id_marca_prod?.ToString() ?? "-")</td>
+                <td>
+                    <button class="btn btn-sm btn-warning"
+                            onclick="abrirModalEditar(
+                                            @p.id_prod,
+                                            '@p.nombre_prod',
+                                            @p.stock_prod,
+                                            @p.precio_com_prod,
+                                            @p.precio_ven_prod,
+                                            '@(p.fecha_cad_prod?.ToString("yyyy-MM-dd") ?? "")',
+                                            @(p.id_prov_prod ?? 0),
+                                            @(p.id_marca_prod ?? 0)
+                                        )">
+                        Editar
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Modal Agregar/Editar -->
+<div class="modal fade" id="productoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formProducto" onsubmit="return guardarProducto()">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productoModalLabel">Agregar Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="id_prod" />
+
+                    <div class="mb-3">
+                        <label for="nombre_prod" class="form-label">Nombre</label>
+                        <input type="text" id="nombre_prod" class="form-control" required maxlength="100" />
+                        <div class="invalid-feedback" id="error_nombre_prod"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="stock_prod" class="form-label">Stock</label>
+                        <input type="number" id="stock_prod" class="form-control" required min="0" />
+                        <div class="invalid-feedback" id="error_stock_prod"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="precio_com_prod" class="form-label">Precio Compra</label>
+                        <input type="number" id="precio_com_prod" class="form-control" required step="0.01" min="0" />
+                        <div class="invalid-feedback" id="error_precio_com_prod"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="precio_ven_prod" class="form-label">Precio Venta</label>
+                        <input type="number" id="precio_ven_prod" class="form-control" required step="0.01" min="0" />
+                        <div class="invalid-feedback" id="error_precio_ven_prod"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="fecha_cad_prod" class="form-label">Fecha Caducidad</label>
+                        <input type="date" id="fecha_cad_prod" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_prov_prod" class="form-label">ID Proveedor</label>
+                        <select id="id_prov_prod" class="form-select">
+                            <option value="">-- Selecciona ID --</option>
+                            @foreach (var provId in proveedoresIds)
+                            {
+                                <option value="@provId">@provId</option>
+                            }
+                        </select>
+                        <div class="invalid-feedback" id="error_id_prov_prod"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_marca_prod" class="form-label">ID Marca</label>
+                        <select id="id_marca_prod" class="form-select">
+                            <option value="">-- Selecciona ID --</option>
+                            @foreach (var marId in marcasIds)
+                            {
+                                <option value="@marId">@marId</option>
+                            }
+                        </select>
+                        <div class="invalid-feedback" id="error_id_marca_prod"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div style="margin-top: 20px;">
+    <a href="@Url.Action("Index", "Productos")" class="btn btn-secondary">Regresar</a>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function abrirModalAgregar() {
+            $('#productoModalLabel').text('Agregar Producto');
+            $('#formProducto')[0].reset();
+            $('#id_prod').val('');
+            $('.invalid-feedback').text('').hide();
+            new bootstrap.Modal($('#productoModal')).show();
+        }
+
+        function abrirModalEditar(id, nombre, stock, precComp, precVen, fechaCad, provId, marcaId) {
+            $('#productoModalLabel').text('Editar Producto');
+            $('#id_prod').val(id);
+            $('#nombre_prod').val(nombre);
+            $('#stock_prod').val(stock);
+            $('#precio_com_prod').val(precComp);
+            $('#precio_ven_prod').val(precVen);
+            $('#fecha_cad_prod').val(fechaCad);
+            $('#id_prov_prod').val(provId || '');
+            $('#id_marca_prod').val(marcaId || '');
+            $('.invalid-feedback').text('').hide();
+            new bootstrap.Modal($('#productoModal')).show();
+        }
+
+                function guardarProducto() {
+            const id = $('#id_prod').val();
+            const producto = {
+                id_prod: id ? parseInt(id) : 0,
+                nombre_prod: $('#nombre_prod').val(),
+                stock_prod: parseInt($('#stock_prod').val()) || 0,
+                precio_com_prod: parseFloat($('#precio_com_prod').val()) || 0,
+                precio_ven_prod: parseFloat($('#precio_ven_prod').val()) || 0,
+                fecha_cad_prod: $('#fecha_cad_prod').val() || null,
+                id_prov_prod: $('#id_prov_prod').val() ? parseInt($('#id_prov_prod').val()) : null,
+                id_marca_prod: $('#id_marca_prod').val() ? parseInt($('#id_marca_prod').val()) : null
+            };
+
+            const url = id ? `/Productos/Edit/${id}` : `/Productos/Create`;
+
+            console.log("Datos enviados:", JSON.stringify(producto));
+
+            $.ajax({
+                url: url,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(producto),
+                success: () => {
+                    console.log("Producto guardado exitosamente");
+                    location.reload();
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error del servidor:", xhr.responseJSON);
+                    alert("Error: " + JSON.stringify(xhr.responseJSON));
+                    const errors = xhr.responseJSON?.errors || {};
+                    ['nombre_prod', 'stock_prod', 'precio_com_prod', 'precio_ven_prod', 'id_prov_prod', 'id_marca_prod']
+                        .forEach(f => {
+                            const msg = errors[f]?.[0] || '';
+                            $(`#error_${f}`).text(msg).toggle(!!msg);
+                        });
+                }
+            });
+
+            return false;
+        }
+    </script>
+}

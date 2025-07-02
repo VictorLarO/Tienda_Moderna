@@ -1,0 +1,181 @@
+﻿@model List<Tienda_Moderna.Models.Cliente>
+
+@{
+    ViewData["Title"] = "Gestión de Clientes";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+@if (ViewData["Mensaje"] != null)
+{
+    <div class="alert alert-info" id="mensaje">@ViewData["Mensaje"]</div>
+}
+
+<p>
+    <button class="btn btn-primary" onclick="abrirModalAgregar()">Agregar Cliente</button>
+</p>
+
+<table class="table table-bordered table-striped" id="tablaClientes">
+    <thead class="table-dark">
+        <tr>
+            <th>ID Cliente</th>
+            <th>Nombre</th>
+            <th>Número</th>
+            <th>Dirección</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var cliente in Model)
+        {
+            <tr>
+                <td>@cliente.id_cli</td>
+                <td>@cliente.nombre_cli</td>
+                <td>@cliente.Numero_cli</td>
+                <td>@cliente.dir_cli</td>
+                <td>
+                    <button class="btn btn-sm btn-warning"
+                            onclick="abrirModalEditar(@cliente.id_cli, '@cliente.nombre_cli', '@cliente.Numero_cli', '@cliente.dir_cli')">
+                        Editar
+                    </button>
+                    <button class="btn btn-sm btn-danger"
+                            onclick="abrirModalEliminar(@cliente.id_cli, '@cliente.nombre_cli')">
+                        Eliminar
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Modal Agregar/Editar -->
+<div class="modal fade" id="clienteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formCliente" onsubmit="return guardarCliente()">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="clienteModalLabel">Agregar Cliente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="id_cli" />
+
+                    <div class="mb-3">
+                        <label for="nombre_cli" class="form-label">Nombre</label>
+                        <input type="text" id="nombre_cli" class="form-control" required maxlength="100" />
+                        <div class="invalid-feedback" id="error_nombre_cli"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Numero_cli" class="form-label">Número</label>
+                        <input type="text" id="Numero_cli" class="form-control" maxlength="100" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="dir_cli" class="form-label">Dirección</label>
+                        <input type="text" id="dir_cli" class="form-control" maxlength="100" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmar Eliminación -->
+<div class="modal fade" id="eliminarModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Seguro que deseas eliminar al cliente <strong id="nombreEliminar"></strong>?</p>
+                <input type="hidden" id="idEliminar" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarEliminar()">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Abrir modal en modo agregar
+        function abrirModalAgregar() {
+            $('#clienteModalLabel').text('Agregar Cliente');
+            $('#id_cli, #nombre_cli, #Numero_cli, #dir_cli').val('');
+            $('#error_nombre_cli').text('').hide();
+            new bootstrap.Modal($('#clienteModal')).show();
+        }
+
+        // Abrir modal en modo editar
+        function abrirModalEditar(id, nombre, numero, dir) {
+            $('#clienteModalLabel').text('Editar Cliente');
+            $('#id_cli').val(id);
+            $('#nombre_cli').val(nombre);
+            $('#Numero_cli').val(numero);
+            $('#dir_cli').val(dir);
+            $('#error_nombre_cli').text('').hide();
+            new bootstrap.Modal($('#clienteModal')).show();
+        }
+
+        // Abrir modal eliminar
+        function abrirModalEliminar(id, nombre) {
+            $('#idEliminar').val(id);
+            $('#nombreEliminar').text(nombre);
+            new bootstrap.Modal($('#eliminarModal')).show();
+        }
+
+        // Guardar (Create / Edit)
+        function guardarCliente() {
+            const id = $('#id_cli').val();
+            const cliente = {
+                id_cli: id ? parseInt(id) : 0,
+                nombre_cli: $('#nombre_cli').val(),
+                Numero_cli: $('#Numero_cli').val() || null,
+                dir_cli: $('#dir_cli').val() || null
+            };
+
+            const url = id
+                ? `/Clientes/Edit/${id}`
+                : `/Clientes/Create`;
+
+            $.ajax({
+                url: url,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(cliente),
+                success: () => location.reload(),
+                error: xhr => {
+                    const err = xhr.responseJSON?.errors?.nombre_cli?.[0] || 'Error al guardar';
+                    $('#error_nombre_cli').text(err).show();
+                }
+            });
+
+            return false; // prevenir postback
+        }
+
+        // Confirmar eliminación
+        function confirmarEliminar() {
+            const id = $('#idEliminar').val();
+            $.ajax({
+                url: `/Clientes/Delete`,
+                method: 'POST',
+                data: { id: id },
+                success: () => location.reload(),
+                error: () => {
+                    alert('Error al eliminar el cliente');
+                }
+            });
+        }
+    </script>
+}

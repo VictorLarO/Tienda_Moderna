@@ -1,0 +1,170 @@
+﻿@model List<Tienda_Moderna.Models.Proveedor>
+
+@{
+    ViewData["Title"] = "Gestión de Proveedores";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+@if (ViewData["Mensaje"] != null)
+{
+    <div class="alert alert-info" id="mensaje">@ViewData["Mensaje"]</div>
+}
+
+<p>
+    <button class="btn btn-primary" onclick="abrirModalAgregar()">Agregar Proveedor</button>
+</p>
+
+<table class="table table-bordered table-striped" id="tablaProveedores">
+    <thead class="table-dark">
+        <tr>
+            <th>ID Proveedor</th>
+            <th>Nombre Proveedor</th>
+            <th>Número</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            <tr>
+                <td>@p.id_prov</td>
+                <td>@p.nombre_prov</td>
+                <td>@p.Numero_prov</td>
+                <td>
+                    <button class="btn btn-sm btn-warning"
+                            onclick="abrirModalEditar(@p.id_prov, '@p.nombre_prov', '@p.Numero_prov')">
+                        Editar
+                    </button>
+                    <button class="btn btn-sm btn-danger"
+                            onclick="abrirModalEliminar(@p.id_prov, '@p.nombre_prov')">
+                        Eliminar
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Modal Agregar/Editar Proveedor -->
+<div class="modal fade" id="proveedorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formProveedor" onsubmit="return guardarProveedor()">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="proveedorModalLabel">Agregar Proveedor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="id_prov" />
+
+                    <div class="mb-3">
+                        <label for="nombre_prov" class="form-label">Nombre Proveedor</label>
+                        <input type="text" id="nombre_prov" class="form-control" required maxlength="100" />
+                        <div class="invalid-feedback" id="error_nombre_prov"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Numero_prov" class="form-label">Número</label>
+                        <input type="text" id="Numero_prov" class="form-control" maxlength="10" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmar Eliminación -->
+<div class="modal fade" id="eliminarProveedorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar Proveedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Seguro que deseas eliminar al proveedor <strong id="nombreEliminarProveedor"></strong>?</p>
+                <input type="hidden" id="idEliminarProveedor" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarEliminarProveedor()">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Abrir modal Agregar
+        function abrirModalAgregar() {
+            $('#proveedorModalLabel').text('Agregar Proveedor');
+            $('#id_prov, #nombre_prov, #Numero_prov').val('');
+            $('#error_nombre_prov').text('').hide();
+            new bootstrap.Modal($('#proveedorModal')).show();
+        }
+
+        // Abrir modal Editar
+        function abrirModalEditar(id, nombre, numero) {
+            $('#proveedorModalLabel').text('Editar Proveedor');
+            $('#id_prov').val(id);
+            $('#nombre_prov').val(nombre);
+            $('#Numero_prov').val(numero);
+            $('#error_nombre_prov').text('').hide();
+            new bootstrap.Modal($('#proveedorModal')).show();
+        }
+
+        // Abrir modal Eliminar
+        function abrirModalEliminar(id, nombre) {
+            $('#idEliminarProveedor').val(id);
+            $('#nombreEliminarProveedor').text(nombre);
+            new bootstrap.Modal($('#eliminarProveedorModal')).show();
+        }
+
+        // Guardar (Create / Edit)
+        function guardarProveedor() {
+            const id = $('#id_prov').val();
+            const proveedor = {
+                id_prov: id ? parseInt(id) : 0,
+                nombre_prov: $('#nombre_prov').val(),
+                Numero_prov: $('#Numero_prov').val() || null
+            };
+
+            const url = id
+                ? `/Proveedores/Edit/${id}`
+                : `/Proveedores/Create`;
+
+            $.ajax({
+                url: url,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(proveedor),
+                success: () => location.reload(),
+                error: xhr => {
+                    const err = xhr.responseJSON?.errors?.nombre_prov?.[0] || 'Error al guardar';
+                    $('#error_nombre_prov').text(err).show();
+                }
+            });
+
+            return false;
+        }
+
+        // Confirmar eliminación
+        function confirmarEliminarProveedor() {
+            const id = $('#idEliminarProveedor').val();
+            $.ajax({
+                url: `/Proveedores/Delete`,
+                method: 'POST',
+                data: { id: id },
+                success: () => location.reload(),
+                error: () => alert('Error al eliminar el proveedor')
+            });
+        }
+    </script>
+}

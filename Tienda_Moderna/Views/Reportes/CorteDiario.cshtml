@@ -1,0 +1,126 @@
+﻿@model Tienda_Moderna.Models.CorteDiarioResponse
+
+@{
+    ViewData["Title"] = "Corte Diario";
+}
+
+<h2>Corte Diario</h2>
+
+<div style="margin-top: 20px;">
+    <div style="margin-bottom: 10px;">
+        <button id="generarCorteDiario" class="btn btn-primary">Generar Corte Diario</button>
+        <button id="mostrarCorteDiario" class="btn btn-info" style="margin-left: 10px;">Mostrar Corte Diario</button>
+        <a href="@Url.Action("Index", "Reportes")" class="btn btn-secondary" style="margin-left: 10px;">Regresar</a>
+    </div>
+    <div id="corteDiarioMensaje" class="text-danger" style="display: none;"></div>
+    <table id="corteDiarioTable" class="table" style="display: none;">
+        <thead>
+            <tr>
+                <th>ID Venta</th>
+                <th>Fecha Venta</th>
+                <th>Total Venta</th>
+                <th>Método de Pago</th>
+                <th>Cliente</th>
+                <th>ID Corte</th>
+                <th>Fecha Corte</th>
+                <th>Nombre Corte</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        jQuery(document).ready(function ($) {
+            $('#generarCorteDiario').on('click', function () {
+                $.ajax({
+                    url: '@Url.Action("GenerarCorteDiario", "Reportes")',
+                    method: 'POST',
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.error) {
+                            $('#corteDiarioMensaje').text(response.error).show();
+                            $('#corteDiarioTable').hide();
+                        } else {
+                            $('#corteDiarioMensaje').hide();
+                            var tbody = $('#corteDiarioTable tbody');
+                            tbody.empty();
+                            if (response.data && Array.isArray(response.data)) {
+                                $.each(response.data, function (index, item) {
+                                    var row = '<tr>' +
+                                        '<td>' + (item.idVenta || 'N/A') + '</td>' +
+                                        '<td>' + (item.fechaVenta ? new Date(item.fechaVenta).toLocaleString() : 'N/A') + '</td>' +
+                                        '<td>' + (item.totalVenta ? item.totalVenta.toFixed(2) : '0.00') + '</td>' +
+                                        '<td>' + (item.metodoPagoVenta || 'N/A') + '</td>' +
+                                        '<td>' + (item.nombreCli || 'Sin ventas') + '</td>' +
+                                        '<td>' + (item.idCorte || 'N/A') + '</td>' +
+                                        '<td>' + (item.fechaCorte ? new Date(item.fechaCorte).toLocaleString() : 'N/A') + '</td>' +
+                                        '<td>' + (item.nombreCorte || 'N/A') + '</td>' +
+                                        '</tr>';
+                                    tbody.append(row);
+                                });
+                            } else {
+                                $('#corteDiarioMensaje')
+                                    .text('No hay detalles de ventas para mostrar. Monto del corte: 0.00')
+                                    .show();
+                            }
+                            $('#corteDiarioTable').show();
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        $('#corteDiarioMensaje')
+                            .text('Error al generar el corte: ' + (xhr.responseJSON?.error || error))
+                            .show();
+                        $('#corteDiarioTable').hide();
+                    }
+                });
+            });
+
+            $('#mostrarCorteDiario').on('click', function () {
+                $.ajax({
+                    url: '@Url.Action("MostrarCorteDiario", "Reportes")',
+                    method: 'POST',
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.error) {
+                            $('#corteDiarioMensaje').text(response.error).show();
+                            $('#corteDiarioTable').hide();
+                        } else {
+                            $('#corteDiarioMensaje').hide();
+                            var tbody = $('#corteDiarioTable tbody');
+                            tbody.empty();
+                            if (response.data && Array.isArray(response.data)) {
+                                $.each(response.data, function (index, item) {
+                                    var row = '<tr>' +
+                                        '<td>' + (item.idVenta || 'N/A') + '</td>' +
+                                        '<td>' + (item.fechaVenta ? new Date(item.fechaVenta).toLocaleString() : 'N/A') + '</td>' +
+                                        '<td>' + (item.totalVenta ? item.totalVenta.toFixed(2) : '0.00') + '</td>' +
+                                        '<td>' + (item.metodoPagoVenta || 'N/A') + '</td>' +
+                                        '<td>' + (item.nombreCli || 'Sin ventas') + '</td>' +
+                                        '<td>' + (item.idCorte || 'N/A') + '</td>' +
+                                        '<td>' + (item.fechaCorte ? new Date(item.fechaCorte).toLocaleString() : 'N/A') + '</td>' +
+                                        '<td>' + (item.nombreCorte || 'N/A') + '</td>' +
+                                        '</tr>';
+                                    tbody.append(row);
+                                });
+                            } else {
+                                $('#corteDiarioMensaje')
+                                    .text('No hay detalles de ventas para mostrar. Monto del corte: 0.00')
+                                    .show();
+                            }
+                            $('#corteDiarioTable').show();
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        $('#corteDiarioMensaje')
+                            .text('Error al mostrar el corte: ' + (xhr.responseJSON?.error || error))
+                            .show();
+                        $('#corteDiarioTable').hide();
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,340 @@
+﻿@model List<Tienda_Moderna.Models.Inventario>
+
+@{
+    ViewData["Title"] = "Ventas";
+}
+
+<h2>Ventas</h2>
+
+<!-- Sección de búsqueda local -->
+<div style="margin-top: 20px; margin-bottom: 20px;">
+    <input type="text" id="searchInput" class="form-control" placeholder="Buscar en inventario..." style="width: 300px; display: inline-block;" />
+    <button id="searchButton" class="btn btn-primary" style="margin-left: 10px;">Buscar</button>
+</div>
+
+<h2>Inventario</h2>
+
+@if (Model == null || !Model.Any())
+{
+    <p>No se encontraron registros en el inventario.</p>
+}
+else
+{
+    <table class="table" id="inventarioTable">
+        <thead>
+            <tr>
+                <th>ID Producto</th>
+                <th>Nombre Producto</th>
+                <th>ID Marca</th>
+                <th>Marca</th>
+                <th>ID Proveedor</th>
+                <th>Stock Disponible</th>
+                <th>Precio Compra</th>
+                <th>Fecha Caducidad</th>
+                <th>Precio Venta</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.ID_Producto</td>
+                    <td>@item.Nombre_Producto</td>
+                    <td>@item.ID_Marca</td>
+                    <td>@item.Marca</td>
+                    <td>@item.ID_Proveedor</td>
+                    <td>@item.Stock_Disponible</td>
+                    <td>@item.Precio_Compra</td>
+                    <td>@(item.Fecha_Caducidad?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                    <td>@item.Precio_Venta</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<!-- Sección de carrito y venta -->
+<h3>Agregar Productos a la Venta</h3>
+<div id="productoContainer">
+    <div class="producto-row" style="margin-bottom: 10px;">
+        <input type="number" class="form-control productoId" placeholder="ID Producto" style="width: 150px; display: inline-block;" />
+        <input type="number" class="form-control cantidad" placeholder="Cantidad" min="1" style="width: 150px; margin-left: 10px;" />
+        <button class="btn btn-success agregarProducto" style="margin-left: 10px;">Agregar</button>
+    </div>
+</div>
+<button id="comprobarDisponibilidad" class="btn btn-info" disabled>Comprobar disponibilidad y precios</button>
+<label>Total:</label>
+<input type="number" id="total" class="form-control" step="0.01" readonly style="width: 150px; display: inline-block;" />
+<span id="mensaje" class="text-danger"></span>
+
+<div id="pagoDiv" style="margin-top: 20px; display: none;">
+    <label>ID Cliente (opcional):</label>
+    <input type="number" id="idCliente" class="form-control" style="width: 150px; display: inline-block;" />
+    <label>Método de Pago:</label>
+    <select id="metodoPago" class="form-control" style="width: 200px; margin-left: 10px; display: inline-block;">
+        <option value="EFECTIVO">Efectivo</option>
+        <option value="TARJETA">Tarjeta</option>
+    </select>
+    <button id="confirmarVenta" class="btn btn-success" style="margin-left: 10px;" disabled>Confirmar Venta</button>
+</div>
+
+<div id="ticketContainer" style="margin-top: 20px; display: none;">
+    <h3>Ticket</h3>
+    <div id="ticketEncabezado"></div>
+    <table id="ticketDetalle" class="table">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div id="ticketTotal"></div>
+</div>
+<button id="generarTicket" class="btn btn-secondary" style="display: none; margin-top: 10px;">Generar Ticket</button>
+
+<style>
+    .container {
+        margin-top: 20px;
+    }
+
+    .text-danger {
+        color: red;
+    }
+
+    .text-success {
+        color: green;
+    }
+
+    .producto-row {
+        display: flex;
+        align-items: center;
+    }
+</style>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        let carrito = [];
+
+        // Función para actualizar el carrito con precios iniciales (0 hasta validar)
+        function actualizarCarrito() {
+            let tbody = $('#ticketDetalle tbody');
+            tbody.empty();
+            let total = 0;
+            $('.producto-row').each(function () {
+                let idProd = $(this).find('.productoId').val();
+                let cantidad = $(this).find('.cantidad').val();
+                if (idProd && cantidad && !isNaN(idProd) && !isNaN(cantidad) && parseInt(cantidad) > 0) {
+                    let precio = 0; // Se actualizará al validar
+                    let subtotal = parseInt(cantidad) * precio;
+                    let row = '<tr>' +
+                        '<td>' + idProd + '</td>' +
+                        '<td>' + cantidad + '</td>' +
+                        '<td>' + precio.toFixed(2) + '</td>' +
+                        '<td>' + subtotal.toFixed(2) + '</td>' +
+                    '</tr>';
+                    tbody.append(row);
+                    total += subtotal;
+                }
+            });
+            $('#total').val(total.toFixed(2));
+            $('#comprobarDisponibilidad').prop('disabled',
+                $('.producto-row').length === 1
+                && !$('.productoId').val()
+                && !$('.cantidad').val()
+            );
+        }
+
+        // Agregar nuevo producto
+        $('.agregarProducto').click(function () {
+            let newRow = '<div class="producto-row" style="margin-bottom:10px;">' +
+                '<input type="number" class="form-control productoId" placeholder="ID Producto" style="width:150px;display:inline-block;" />' +
+                '<input type="number" class="form-control cantidad" placeholder="Cantidad" min="1" style="width:150px;margin-left:10px;display:inline-block;" />' +
+                '<button class="btn btn-danger eliminarProducto" style="margin-left:10px;">Eliminar</button>' +
+            '</div>';
+            $('#productoContainer').append(newRow);
+            actualizarCarrito();
+
+            // Evento eliminar
+            $('.eliminarProducto').off('click').click(function () {
+                $(this).parent().remove();
+                actualizarCarrito();
+            });
+        });
+
+        // Detectar cambios para habilitar botón de validación
+        $('#productoContainer').on('input', '.productoId, .cantidad', function () {
+            actualizarCarrito();
+            $('#comprobarDisponibilidad').prop('disabled', false);
+            $('#pagoDiv').hide();
+            $('#confirmarVenta').prop('disabled', true);
+            $('#ticketContainer').hide();
+            $('#generarTicket').hide();
+        });
+
+        // Comprobar disponibilidad y precios
+        $('#comprobarDisponibilidad').click(function () {
+            let items = [];
+            $('.producto-row').each(function () {
+                let idProd = $(this).find('.productoId').val();
+                let cantidad = $(this).find('.cantidad').val();
+                if (idProd && cantidad && parseInt(cantidad) > 0) {
+                    items.push({ id_prod: parseInt(idProd), cantidad: parseInt(cantidad) });
+                }
+            });
+            let itemsJson = JSON.stringify(items);
+            let totalFrontend = 0; // El backend retornará el total real
+
+            $.post('/Ventas/ValidarVenta', { itemsJson, totalFrontend }, function (data) {
+                if (data.status === 'success') {
+                    $('#mensaje').text(data.mensaje).removeClass('text-danger').addClass('text-success');
+                    $('#total').val(data.totalReal.toFixed(2));
+
+                    // Actualizar detalle con los precios reales
+                    let totalCant = items.reduce((s, x) => s + x.cantidad, 0);
+                    let tbody = $('#ticketDetalle tbody');
+                    tbody.empty();
+                    items.forEach(item => {
+                        let precio = data.totalReal / totalCant * item.cantidad;
+                        let subtotal = precio * item.cantidad;
+                        tbody.append(
+                            '<tr>' +
+                            '<td>' + item.id_prod + '</td>' +
+                            '<td>' + item.cantidad + '</td>' +
+                            '<td>' + precio.toFixed(2) + '</td>' +
+                            '<td>' + subtotal.toFixed(2) + '</td>' +
+                            '</tr>'
+                        );
+                    });
+
+                    $('#pagoDiv').show();
+                    $('#confirmarVenta').prop('disabled', false);
+                } else {
+                    $('#mensaje').text(data.mensaje).removeClass('text-success').addClass('text-danger');
+                    $('#total').val('0.00');
+                    $('#pagoDiv').hide();
+                    $('#confirmarVenta').prop('disabled', true);
+                }
+            }).fail(function (xhr, status, error) {
+                $('#mensaje').text("Error en la solicitud: " + error).addClass('text-danger');
+            });
+        });
+
+        // Confirmar venta
+        $('#confirmarVenta').click(function () {
+            let items = [];
+            $('.producto-row').each(function () {
+                let idProd = $(this).find('.productoId').val();
+                let cantidad = $(this).find('.cantidad').val();
+                if (idProd && cantidad && parseInt(cantidad) > 0) {
+                    items.push({ id_prod: parseInt(idProd), cantidad: parseInt(cantidad) });
+                }
+            });
+            let payload = {
+                idCliente: $('#idCliente').val() || null,
+                metodoPago: $('#metodoPago').val(),
+                itemsJson: JSON.stringify(items),
+                totalVenta: parseFloat($('#total').val()) || 0
+            };
+
+            $.post('/Ventas/RegistrarVenta', payload, function (data) {
+                if (data.status === 'success') {
+                    alert(data.mensaje);
+                    let idVenta = parseInt(data.datos); // Cambiado de JSON.parse a parseInt
+                    $('#generarTicket').show().data('idVenta', idVenta);
+                    // Reset carrito
+                    $('#productoContainer').html(`<div class="producto-row" style="margin-bottom:10px;">
+                        <input type="number" class="form-control productoId" placeholder="ID Producto" style="width:150px;display:inline-block;" />
+                        <input type="number" class="form-control cantidad" placeholder="Cantidad" min="1" style="width:150px;margin-left:10px;" />
+                        <button class="btn btn-success agregarProducto" style="margin-left:10px;">Agregar</button>
+                    </div>`);
+                    $('.agregarProducto').click(function () {
+                        let newRow = '<div class="producto-row" style="margin-bottom:10px;">' +
+                            '<input type="number" class="form-control productoId" placeholder="ID Producto" style="width:150px;display:inline-block;" />' +
+                            '<input type="number" class="form-control cantidad" placeholder="Cantidad" min="1" style="width:150px;margin-left:10px;" />' +
+                            '<button class="btn btn-danger eliminarProducto" style="margin-left:10px;">Eliminar</button>' +
+                        '</div>';
+                        $('#productoContainer').append(newRow);
+                        $('.eliminarProducto').off('click').click(function () {
+                            $(this).parent().remove();
+                        });
+                    });
+                    actualizarCarrito();
+                    $('#pagoDiv').hide();
+                    $('#confirmarVenta').prop('disabled', true);
+                } else {
+                    alert(data.mensaje);
+                }
+            });
+        });
+
+        // Generar e imprimir ticket
+        function generarTicket(idVenta) {
+            $.get('/Ventas/ImprimirTicket', { idVenta }, function (data) {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                // Montar texto tipo consola
+                let text = '';
+                text += '========================================\n';
+                text += '          TIENDA LA MODERNA\n';
+                text += '========================================\n';
+                text += 'Venta #' + String(data.encabezado.id_venta).padStart(6, '0') +
+                        '   Fecha: ' + new Date(data.encabezado.fecha_venta).toLocaleDateString('es-MX') + '\n';
+                text += 'Cliente: ' + (data.encabezado.nombre_cli || 'No registrado') + '\n';
+                text += 'Método: ' + data.encabezado.metodo_pago_venta + '\n';
+                text += '----------------------------------------\n';
+                text += 'Cant. Producto           P.Unit  Subtot\n';
+                text += '----------------------------------------\n';
+                data.detalle.forEach(item => {
+                    let line =
+                        String(item.cantidad).padStart(2) + '   ' +
+                        item.producto.padEnd(16) + ' ' +
+                        item.precio_unitario.toFixed(2).padStart(6) + ' ' +
+                        item.subtotal.toFixed(2).padStart(6) + '\n';
+                    text += line;
+                });
+                text += '----------------------------------------\n';
+                text += 'TOTAL:'.padEnd(36) + '$' + data.total.total.toFixed(2) + '\n';
+                text += '========================================\n';
+                text += '   ¡Gracias por su compra!\n';
+
+                const w = window.open('', '_blank', 'width=400,height=600');
+                w.document.write('<pre>' + text + '</pre>');
+                w.document.close();
+                w.print();
+            }).fail(function () {
+                alert("Error al generar el ticket.");
+            });
+        }
+
+        // Botón Generar Ticket
+        $('#generarTicket').click(function () {
+            let idVenta = $(this).data('idVenta');
+            if (idVenta) generarTicket(idVenta);
+            else alert("No se encontró el ID de la venta.");
+        });
+
+        // Búsqueda local en inventario
+        $('#searchButton').click(function () {
+            let txt = $('#searchInput').val().toLowerCase();
+            $('#inventarioTable tbody tr').each(function () {
+                let ok = false;
+                $(this).find('td').each(function () {
+                    if ($(this).text().toLowerCase().includes(txt)) {
+                        ok = true; return false;
+                    }
+                });
+                $(this).toggle(ok);
+            });
+        });
+        $('#searchInput').keypress(function (e) {
+            if (e.which === 13) $('#searchButton').click();
+        });
+    });
+</script>
+

@@ -1,0 +1,124 @@
+﻿@model List<Tienda_Moderna.Models.Inventario>
+
+<h2>Inventario</h2>
+
+@if (Model == null || !Model.Any())
+{
+    <p>No se encontraron registros en el inventario.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID Producto</th>
+                <th>Nombre Producto</th>
+                <th>ID Marca</th>
+                <th>Marca</th>
+                <th>ID Proveedor</th>
+                <th>Stock Disponible</th>
+                <th>Precio Compra</th>
+                <th>Fecha Caducidad</th>
+                <th>Precio Venta</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.ID_Producto</td>
+                    <td>@item.Nombre_Producto</td>
+                    <td>@item.ID_Marca</td>
+                    <td>@item.Marca</td>
+                    <td>@item.ID_Proveedor</td>
+                    <td>@item.Stock_Disponible</td>
+                    <td>@item.Precio_Compra</td>
+                    <td>@(item.Fecha_Caducidad?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                    <td>@item.Precio_Venta</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<!-- Botón para redirigir a la búsqueda -->
+<div style="margin-top: 20px;">
+    <a href="@Url.Action("BuscarProductos", "Inventario")" class="btn btn-primary">Buscar</a>
+</div>
+<div style="margin-top: 20px;">
+    <a href="@Url.Action("Editar", "Productos")" class="btn btn-primary">Gestionar Productos</a>
+</div>
+
+<!-- Estilos CSS para las notificaciones -->
+<style>
+    .notification-popup {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border: 1px solid #f5c6cb;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        max-width: 300px;
+        display: none; /* Oculto por defecto */
+    }
+
+        .notification-popup .close-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #721c24;
+            border: none;
+            background: none;
+        }
+</style>
+
+<!-- Script JavaScript para mostrar y cerrar notificaciones -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Notificaciones de caducidad
+        @if (ViewBag.NotificacionesCaducidad != null && ((IEnumerable<object>)ViewBag.NotificacionesCaducidad).Any())
+        {
+                @:var caducidadNotifs = @Html.Raw(Json.Serialize(ViewBag.NotificacionesCaducidad));
+                @:caducidadNotifs.forEach(function(msg) {
+                @:    var popup = document.createElement('div');
+                @:    popup.className = 'notification-popup';
+                @:    popup.innerHTML = msg + '<span class="close-btn">×</span>';
+                @:    document.body.appendChild(popup);
+                @:    popup.style.display = 'block';
+                @:    popup.querySelector('.close-btn').addEventListener('click', function() {
+                @:        popup.style.display = 'none';
+                @:    });
+                @:});
+        }
+        else
+        {
+                @:console.log("No hay notificaciones de caducidad.");
+        }
+
+        // Notificaciones de stock bajo
+        @if (ViewBag.NotificacionesStock != null && ((IEnumerable<object>)ViewBag.NotificacionesStock).Any())
+        {
+                @:var stockNotifs = @Html.Raw(Json.Serialize(ViewBag.NotificacionesStock));
+                @:stockNotifs.forEach(function(msg) {
+                @:    var popup = document.createElement('div');
+                @:    popup.className = 'notification-popup';
+                @:    popup.innerHTML = msg + '<span class="close-btn">×</span>';
+                @:    document.body.appendChild(popup);
+                @:    popup.style.display = 'block';
+                @:    popup.querySelector('.close-btn').addEventListener('click', function() {
+                @:        popup.style.display = 'none';
+                @:    });
+                @:});
+        }
+        else
+        {
+                @:console.log("No hay notificaciones de stock.");
+        }
+    });
+</script>
